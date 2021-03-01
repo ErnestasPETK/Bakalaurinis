@@ -92,30 +92,6 @@ class KalmanFilter(object):
         return self.x[0:2]
 
 
-class raketa:
-
-    def __init__(self, name):
-
-        self.name = name
-
-    def get_name(self):
-
-        return self.name
-
-
-
-    def set_coordinates (self, x_coordinate,y_coordinate):
-        self.x_coordinate = x_coordinate
-        self.y_coordinate = y_coordinate
-
-        return print(f" Object's name - {self.name}, its  x coordinate {self.x_coordinate} and y coordinate {self.y_coordinate} ")
-
-    def set_identification_nr (self, identification_nr):
-        self.identification_nr= identification_nr
-
-    def get_coordinates(self):
-        return self.x_coordinate, self.y_coordinate
-
 
 
 

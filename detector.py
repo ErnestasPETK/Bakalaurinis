@@ -330,7 +330,8 @@ def detect (frame,debugMode):
     max_area_thresh = 300
     min_peri_thresh = 40
     max_peri_thresh = 300
-
+    min_radius_thresh = 30
+    max_radius_thresh = 100
 
 
     centers= []
@@ -345,32 +346,43 @@ def detect (frame,debugMode):
 
         peri = cv2.arcLength(c, True)
         # print ( peri, "peri")
+
         # epsilon is maximum distance from contour to approximated contour
 
-        epsilon = 0.01 * cv2.arcLength(cnts, True)
+        epsilon = 0.01 * cv2.arcLength(c, True)
 
         # array of contours
 
-        approx = cv2.approxPolyDP(cnts, epsilon, True)
+        approx = cv2.approxPolyDP(c, epsilon, True)
         # print( " approx ", approx)
         # contour bounding contour
+
 
         (x, y, w, h) = cv2.boundingRect(approx)
 
         # contour aspect ratio
         aspectRatio = w / float(h)
 
+        #contour enclosing circle
+        (x_circle, y_circle), radius = cv2.minEnclosingCircle(approx)
 
-        if (area > min_area_thresh) and (area < max_area_thresh) and (peri > min_peri_thresh) and (peri < max_peri_thresh):
 
-            M = cv2.moments(c)
-            cx = float(M['m10'] / M['m00'])
-            cy = float(M['m01'] / M['m00'])
+
+
+
+
+
+        if (area > min_area_thresh) and (area < max_area_thresh) and (peri > min_peri_thresh) and (peri < max_peri_thresh) and (radius>min_radius_thresh) and (radius< max_radius_thresh):
+
+
+            #M = cv2.moments(c)
+            #cx = float(M['m10'] / M['m00'])
+            #cy = float(M['m01'] / M['m00'])
 
             indexlist.append(indexnr)
             indexnr += 1
-            centers.append(np.array([[cx], [cy]]))
-
+            #centers.append(np.array([[cx], [cy]]))
+            centers.append(np.array([[x_circle],[y_circle]]))
 
     #img_thresh = cv2.resize(img_thresh, (0, 0), None, scale, scale)
     #img_edges = cv2.resize(img_edges,(0,0), None, scale, scale)
@@ -379,14 +391,8 @@ def detect (frame,debugMode):
     #eroded= cv2.resize(eroded, (0,0), None, scale, scale)
     cv2.imshow('opening',opening)
 
-    centers = sorted(centers, key = lambda x: x[0])
-
-    print(f"*************************"
-          f"\n"
-          f" centers {centers}"
-          f"\n"
-          f"*************************")
-    #cv2.imshow('eroded', eroded)
+    centers = sorted(centers, key = lambda x: x[1])
+#cv2.imshow('eroded', eroded)
     return centers, indexlist
 
 

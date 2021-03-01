@@ -1,8 +1,10 @@
 from kalmanfilter import KalmanFilter
 from detector import detect
 from detector import click
-from kalmanfilter import raketa
 # from numba import jit, cuda
+
+
+
 
 def convert (coordinates_list):
     return tuple(coordinates_list)
@@ -10,11 +12,10 @@ def convert (coordinates_list):
 import cv2
 import numpy as np
 
-
 # @jit(target = "cuda")
 class DObjects:
 
-
+    r_list = []
     xp = 0
     yp = 0
 
@@ -27,8 +28,39 @@ class DObjects:
     yl_search_zone = 0
     yh_search_zone = 360
 
-
     kalman_ob = KalmanFilter(0.05, 4, 4, 4, 4, 4)
+
+    def __init__(self):
+        self.kalman_ob = DObjects.kalman_ob
+        self.xcen = np.array([41])
+        self.ycen = np.array([41])
+        self.yp = np.array([41])
+        self.xp = np.array([41])
+        self.ye = np.array([41])
+        self.xe = np.array([41])
+
+    def draw(self,frame_o):
+
+        # circle the detected position
+        cv2.circle(frame_o, (int(self.xcen), int(self.ycen)), 15, (0, 191, 255), 2)
+
+        # KALMAN predict
+        self.predict_x_y()
+        cv2.circle(frame_o, (int(self.yp), int(self.xp)), 20, (0, 0, 255), 2)
+
+        self.update_x_y((self.xcen, self.ycen))
+
+
+
+        # Draw a circle as the predicted and estimated object position
+
+
+        cv2.circle(frame_o, (int(self.xe), int(self.ye)), 25, (255, 0, 0), 2)
+#pakeiciau xp i xe
+        cv2.putText(frame_o, f"  Estimated Position ", (int(self.ye + 15), int(self.ye + 0)), 0, 0.5,(0, 0, 255), 2)
+        cv2.putText(frame_o, f"  Predicted Position ", (int(self.xp + 15), int(self.yp + 0)), 0, 0.5, (255, 0, 0), 2)
+        cv2.putText(frame_o, f"  Measured Position  ", (int(self.xcen), int(self.ycen)), 0, 0.5, (0, 191, 255), 2)
+
 
     def update_sz(self,xl_search_zone, xh_search_zone, yl_search_zone, yh_search_zone):
         self.xl_search_zone = xl_search_zone
@@ -37,6 +69,17 @@ class DObjects:
         self.yh_search_zone = yh_search_zone
         return print( "  self. search zones ", self.xl_search_zone, self.xh_search_zone, self.yl_search_zone, self.yh_search_zone)
 
+    def get_sz_xl(self):
+        return self.xl_search_zone
+
+    def get_sz_xh(self):
+        return self.xh_search_zone
+
+    def get_sz_yl(self):
+        return self.yl_search_zone
+
+    def get_sz_yh(self):
+        return self.yh_search_zone
 
     def get_sz(self):
         return print(f" self.xl_search_zone, self.xh_search_zone, self.yl_search_zone, self.yh_search_zone {self.xl_search_zone, self.xh_search_zone, self.yl_search_zone, self.yh_search_zone}")
@@ -69,20 +112,37 @@ class DObjects:
         return self.kalman_ob.update(center_point_lt)
 
     def update_x_y(self, center_point_lt):
-         (self.xp, self.yp) = self.updateKalman(center_point_lt)
+         (self.xe, self.ye) = self.updateKalman(center_point_lt)
+         #(self.xp, self.yp) = self.updateKalman(center_point_lt)
          # return (self.xp, self.yp)
 
     def predict_x_y(self):
-         (self.xe, self.ye) = self.kalman_ob.predict()
+         (self.xp, self.yp) = self.kalman_ob.predict()
+         #(self.xe, self.ye) = self.kalman_ob.predict()
          # return (self.xe, self.ye)
+    def getparam(self):
+        return print (f"\n"
+                      f"\n"
+                      f" Object parameters:  "
+                      f"\n"
+                      f" xe {self.xe} ye {self.ye}"
+                      f"\n"
+                      f" xp {self.xp} yp {self.yp} "
+                      f"\n"
+                      f" xcen {self.xcen} ycen {self.ycen}"
+                      f"\n")
 
+
+
+class raketa(DObjects):
+
+
+        print (" Child Class constructed for a rocket" )
 
 
 
 def main():
-    # dobjects_arr = []
-    # dobjects_arr.append(DObjects())
-    # print(dobjects_arr)
+
     HighSpeed = 100
     ControlSpeedVar = 100  # while lowest: 1 - Highest: 100
     dobjects_arr = []
@@ -97,7 +157,7 @@ def main():
 
     '''
     count = 0
-
+    n_t_count = 0
     VideoCap = cv2.VideoCapture('video3.mp4')
 
     while (True):
@@ -160,6 +220,20 @@ def main():
                     print(f" xl_sz, xh_sz, yl_sz, yh_sz  {xl_sz, xh_sz, yl_sz, yh_sz} ")
                     dobject.update_sz(xl_sz, xh_sz, yl_sz, yh_sz)
 
+                elif i ==9:
+                    xl_sz = dobject.xl_search_zone
+                    xh_sz = dobject.xh_search_zone
+                    yl_sz = dobject.yl_search_zone
+                    yh_sz = dobject.yh_search_zone
+                    xl_sz = xl_sz
+                    xh_sz = xh_sz + (640 * 2)
+                    yl_sz = yl_sz
+                    yh_sz = yh_sz + (360 * 2)
+                    print(f" xl_sz, xh_sz, yl_sz, yh_sz  {xl_sz, xh_sz, yl_sz, yh_sz} ")
+                    dobject.update_sz(xl_sz, xh_sz, yl_sz, yh_sz)
+
+
+
             print(f"*************************"
                   f"\n"
                   f"\n"
@@ -168,24 +242,34 @@ def main():
                   f"\n"
                   f"*************************")
 
+            print(f"*************************"
+                  f"\n"
+                  f"\n"
+                  f" centers  {centers}"
+                  f"\n"
+                  f"\n"
+                  f"*************************")
 
+            # pereinam per objektus ir raketu centrus. Jeigu raketos centras patenka i objekto paieskos zona, centro koordinates priskiriamos objeko self.
+            # centro koordinatems
 
             for dobject in dobjects_arr:
 
                 dobject.get_sz()
-                print( "  OBJECT NAME  " , dobject)
 
                 for center in centers:
-                    x_c = center[0]
-                    y_c = center[1]
+                     x_c = center[0]
+                     y_c = center[1]
 
-                    if  dobject.xl_search_zone <  x_c < dobject.xh_search_zone and dobject.yl_search_zone < dobject.yh_search_zone:
 
+                     if  dobject.get_sz_xl() <  x_c < dobject.get_sz_xh() and dobject.get_sz_yl() < y_c < dobject.get_sz_yh():
+
+                        print ( f" atitiko ")
                         dobject.set_xcen(x_c)
                         dobject.set_ycen(y_c)
 
                         dobject.update_x_y((x_c, y_c))
-            count += 1
+        count += 1
 
 
 
@@ -203,17 +287,12 @@ def main():
 
 
             for Dobject in dobjects_arr:
-
-                print(f"\n"
-                      f" object  {Dobject}"
-                      f"\n"
-                      f"*************************")
+                Dobject.getparam()
 
                 print(f"*************************"
                       f"\n"
                       f"\n"
-                      f"  search zones :   " 
-                    
+                      f"  search zone :   " 
                       f"\n"
                       f"\n"
                       f"*************************")
@@ -226,71 +305,61 @@ def main():
                     x_c = center[0]
                     y_c = center[1]
 
+                    print ( f" x_c y_c  {x_c , y_c } ")
 
                     # Jeigu raketa yra "objekto" paieskos zonoje, tuomet imame koordinates ir atvaizduojam jas
 
-                    if Dobject.xl_search_zone < x_c < Dobject.xh_search_zone and Dobject.yl_search_zone < y_c < Dobject.yh_search_zone:
+                    if  Dobject.get_sz_xl() <  x_c < Dobject.get_sz_xh() and Dobject.get_sz_yl() < y_c < Dobject.get_sz_yh():
+
+                        #sukurti atskira objekta vienam atrastam konturui ir updatiniti jo koordinates jeigu patenka i jo predicted vietos zona
+
+
+
+                        if len(Dobject.r_list)> 0:
+                            for rocket in Dobject.r_list:
+                                if x_c < rocket.get_xcen() + rocket.zone_x and x_c > rocket.get_xcen() - rocket.zone_x and y_c < rocket.get_ycen() + rocket.zone_y and y_c > rocket.get_ycen() - rocket.zone_y:
+
+                                    print( f" rocket in zone of another rocket  " )
+
+                                    rocket.update_x_y((x_c,y_c))
+                                else:
+                                    print( f" rocket located with enough distance from any other rocket ")
+                                    rocketobj = raketa()
+                                    rocketobj.set_xcen(x_c)
+                                    rocketobj.set_ycen(y_c)
+                                    rocketobj.update_x_y((x_c, y_c))
+                                    Dobject.r_list.append(rocketobj)
+
+
+                            for rockets in Dobject.r_list:
+                                #rockets.draw(frame)
+                                print ( f'  raketos parametrai   ')
+                                rockets.getparam()
+
+
+                        else:
+                            rocketobj = raketa()
+                            rocketobj.set_xcen(x_c)
+                            rocketobj.set_ycen(y_c)
+                            rocketobj.update_x_y((x_c,y_c))
+                            Dobject.r_list.append( rocketobj)
+
+
+
                         Dobject.set_xcen(x_c)
                         Dobject.set_ycen(y_c)
+
+                        print( " raketa paieskos zonoje " )
 
                         Dobject.update_x_y((x_c, y_c))
 
 
-                        if Dobject.xcen > x_c - Dobject.zone_x and Dobject.xcen < x_c + Dobject.zone_x:
-                            if Dobject.ycen > y_c - Dobject.zone_y and Dobject.ycen < y_c + Dobject.zone_y:
-                                print("in zone")
-
-                                # *******************************************************************************************#
-                                # for center in centers:
-
-                                x_coordinate = center[0]
-                                y_coordinate = center[1]
-
-                                Dobject.set_xcen(x_coordinate)
-                                Dobject.set_ycen(y_coordinate)
-
-                                print(f" x_coordinate  {x_coordinate}")
-                                print(f" y_coordinate  {y_coordinate}")
-
-                                cv2.circle(frame, (int(Dobject.get_xcen()), int(Dobject.get_ycen())), 15, (0, 191, 255), 2)
-
-                                                # KALMAN predict
-
-                                Dobject.predict_x_y()
-                                x = Dobject.get_xe()
-                                y = Dobject.get_ye()
-
-                                                # Draw a circle as the predicted object position
-
-                                cv2.circle(frame, (int(x), int(y)), 25, (255, 0, 0), 2)
-
-                                                # KALMAN update
-                                center_x = center[0]
-                                center_y = center[1]
-                                Dobject.update_x_y((center_x, center_y))
-                                x1 = Dobject.get_xp()
-                                y1 = Dobject.get_yp()
-
-                                                # Draw a rectangle as the estimated object position
-                                cv2.rectangle(frame, (int(x1 - 15), int(y1 - 15)), (int(x1 + 15), int(y1 + 15)),
-                                                              (0, 0, 255), 2)
-                                                #
-                                cv2.putText(frame, f"  Estimated Position ", (int(x1 + 15), int(y1 + 10)), 0, 0.5,
-                                                            (0, 0, 255), 2)
-                                cv2.putText(frame, f"  Predicted Position ", (int(x + 15), int(y + 0)), 0, 0.5, (255, 0, 0),
-                                                            2)
-                                cv2.putText(frame, f"  Measured Position  ", (int(x_coordinate), int(y_coordinate)), 0, 0.5,(0, 191, 255), 2)
-                                #     # jeigu gautas centras yra objekte esancio predicted x
-                                # if x_c > dobject.xp + dobject.zone_x and x_c < dobject.xp - dobject.zone_x and y_c > dobject.yp + dobject.zone_y and y_c < dobject.yp - dobject.zone_y:
-                                #     centers_iter = iter(centers)
-                                #     center = next(centers_iter)
-                                #     print(f"*************************"
-                                #           f"\n"
-                                #           f" center after iter {center}"
-                                #           f"\n"
-                                #           f"*************************")
-
-            count+=1
+                        print (f"  Object:  {Dobject}  ")
+                        Dobject.getparam()
+                        Dobject.draw(frame)
+            for DObject in dobjects_arr:
+                DObject.getparam()
+                DObject.draw(frame)
 
 
         else:
@@ -299,8 +368,11 @@ def main():
                 dobject.kalman_ob.predict()
                 x = dobject.get_xe()
                 y = dobject.get_ye()
+
+                print ( f"    x = dobject.get_xe() y = dobject.get_ye()    {x , y}")
                 # Draw a rectangle as the predicted object position
                 cv2.rectangle(frame, (int(x - 40), int(y - 40)), (int(x + 40), int(y + 40)), (255, 0, 0), 2)
+
 
         cv2.imshow('Rocket-Tracking', frame)
         if cv2.waitKey(2) & 0xFF == ord('q'):
