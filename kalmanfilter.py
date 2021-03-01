@@ -1,11 +1,7 @@
-import cv2
 import numpy as np
-from filterpy.kalman import MerweScaledSigmaPoints
-from filterpy.kalman import UnscentedKalmanFilter
-from filterpy.common import Q_discrete_white_noise
 
 
-class KalmanFilter(object):
+class KalmanFilter():
     def __init__(self, dt, u_x, u_y, std_acc, x_std_meas, y_std_meas):
         """
 
