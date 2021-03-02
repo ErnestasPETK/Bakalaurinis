@@ -7,8 +7,7 @@ import cv2
 # Klase, kurioje bus laikomos kiekvienos raketos objekto koordinates, KF(Kalman Filter) naudojamas objekto sekimui bei movement predicting
 class rocket:
 
-    zone_x = 150
-    zone_y = 150
+
     x_set = False
     updated= False
     def __init__(self, KF):
@@ -38,6 +37,10 @@ class rocket:
         self.xe = xe
     def set_ye(self,ye):
         self.ye = ye
+    def get_xp(self):
+        return self.x_p
+    def get_yp(self):
+        return self.y_p
 
     def getparam(self):
         return print(f"\n"
@@ -74,7 +77,7 @@ def main():
     count = 0
     rocket_list = []
     VideoCap = cv2.VideoCapture('video3_cut.mp4')
-
+    zone = 200
 
     while(True):
         #read frame
@@ -112,8 +115,14 @@ def main():
                     # perrenkam kiekviena objekta
                     for raketa in rocket_list:
 
+                        r_c_x = raketa.get_xcen()
+                        r_c_y = raketa.get_ycen()
+
+
+
                         #jeigu pries tai paimtas centras patenka i jau esamo centro paieskos zona, tai update'inam jo koordinates ir Kalmano filtra
-                        if int(x_coordinate) < int(raketa.get_xcen()) + int(raketa.zone_x) and int(x_coordinate) > int(raketa.get_xcen()) - int(raketa.zone_x) and int(y_coordinate) < int(raketa.get_ycen()) + int(raketa.zone_y) and int(y_coordinate) > int(raketa.get_ycen()) - int(raketa.zone_y):
+                        if int(x_coordinate) < int(r_c_x) + zone and int(x_coordinate) > int(r_c_x) - zone and \
+                                int(y_coordinate) < int(r_c_y) + zone and int(y_coordinate) > int(r_c_y) - zone:
 
                             print(f" rocket in zone of an existing rocket  ")
 
@@ -156,7 +165,7 @@ def main():
 
 
 
-            if len(rocket_list) > 0 and len(rocket_list) < 20:
+            if len(rocket_list) > 0:
                 for RAKETA in rocket_list:
                     (x_predicted, y_predicted) = RAKETA.rocket_predict()
                     x_center = RAKETA.get_xcen()
@@ -205,11 +214,10 @@ def main():
         while i <= 20:
             for Object in rocket_list:
                 Object.timer()
-                if Object.rocket_timer > 100:
+                if Object.rocket_timer > 40:
                     del Object
                 else:
-                    pass
-                    #print(f"  Object timer:  {Object.rocket_timer}   ")
+                    print( f' timer {Object.rocket_timer}')
             i+= 1
         i = 0
 
