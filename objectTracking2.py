@@ -4,6 +4,7 @@ from detector import click
 #from numba import jit, cuda
 import cv2
 
+# Klase, kurioje bus laikomos kiekvienos raketos objekto koordinates, KF(Kalman Filter) naudojamas objekto sekimui bei movement predicting
 class rocket:
 
     zone_x = 150
@@ -12,6 +13,7 @@ class rocket:
     updated= False
     def __init__(self, KF):
         self.KF = KF
+        self.rocket_timer = 0
 
     def set_xcen(self,xcen):
         self.xcen = xcen
@@ -29,6 +31,7 @@ class rocket:
         return self.x_p, self.y_p
     def coords_update(self,xye):
         self.xe,self.ye = self.KF.update(xye)
+        self.rocket_timer = 0
 
         return self.xe,self.ye
     def set_xe(self,xe):
@@ -47,7 +50,8 @@ class rocket:
                      f"\n"
                      f" xcen {self.xcen} ycen {self.ycen}"
                      f"\n")
-
+    def timer(self):
+        self.rocket_timer+=1
 
 
 #@jit(target = "cuda")
@@ -66,6 +70,7 @@ def main():
     Will try to set different values in the future after observing the performance.
 
     '''
+    i = 0
     count = 0
     rocket_list = []
     VideoCap = cv2.VideoCapture('video3_cut.mp4')
@@ -78,14 +83,17 @@ def main():
         cv2.setMouseCallback("Rocket-Tracking", click)
         #detect object
 
+        # Gauname tinkamu konturu centrus
         centers, indexlist = detect(frame,debugMode)
+
         print (f" \n \n     reset     \n \n ")
         print("centers : ", centers, "end ")
         print( "indexlist:   ", indexlist, "end   ")
 
-
         #in centroids are detected then track them
         if(len(centers)>0):
+
+            #perrenkam centrus
 
             for center in centers:
 
@@ -97,42 +105,58 @@ def main():
 
                 print ( f" rocket_list \n \n  {rocket_list}  \n \n  *************************" )
 
+                #jeigu egzistuoja raketos liste objektai:
 
-                if len(rocket_list) > 0 and len(rocket_list) < 10:
+                if len(rocket_list) > 0 and len(rocket_list) < 20:
+
+                    # perrenkam kiekviena objekta
                     for raketa in rocket_list:
-                        if int(x_coordinate) < int(raketa.get_xcen()) + 250 and int(x_coordinate) > int(raketa.get_xcen()) - int(raketa.zone_x) and int(y_coordinate) < int(raketa.get_ycen()) + int(raketa.zone_y) and int(y_coordinate) > int(raketa.get_ycen()) - int(raketa.zone_y):
+
+                        #jeigu pries tai paimtas centras patenka i jau esamo centro paieskos zona, tai update'inam jo koordinates ir Kalmano filtra
+                        if int(x_coordinate) < int(raketa.get_xcen()) + int(raketa.zone_x) and int(x_coordinate) > int(raketa.get_xcen()) - int(raketa.zone_x) and int(y_coordinate) < int(raketa.get_ycen()) + int(raketa.zone_y) and int(y_coordinate) > int(raketa.get_ycen()) - int(raketa.zone_y):
 
                             print(f" rocket in zone of an existing rocket  ")
 
                             raketa.coords_update((x_coordinate,y_coordinate))
                             raketa.set_xcen(x_coordinate)
                             raketa.set_ycen(y_coordinate)
+                            raketa.rocket_predict()
                             raketa.updated = True
+
+                        #jeigu ne, tai sukuriam nauja objekta ir ikeliam i rocket_list'a
                         else:
                             print ( f" new rocket object ")
                             KF = KalmanFilter(0.05, 4, 4, 4, 4, 4)
-                            OBraketa = rocket(KF)
-                            OBraketa.set_xcen(x_coordinate)
-                            OBraketa.set_ycen(y_coordinate)
-                            OBraketa.set_xe(x_coordinate)
-                            OBraketa.set_ye(y_coordinate)
-                            rocket_list.append(OBraketa)
+                            # object name generation
+                            name = 'raketa_nr_{}'.format(raketa)
+                            print(f" name  {name}")
+                            name = rocket(KF)
+                            name.set_xcen(x_coordinate)
+                            name.set_ycen(y_coordinate)
+                            name.set_xe(x_coordinate)
+                            name.set_ye(y_coordinate)
+                            name.rocket_predict()
+                            name.getparam()
+                            rocket_list.append(name)
 
-
+                # jeigu rocket_list yra tuscias, tai papildom ji objektu, kuriam priklausys pirmosios gautos koordinates
                 else:
+                    print ( " Pirmas objektas ")
                     KF = KalmanFilter(0.05, 4, 4, 4, 4, 4)
-                    OBraketa = rocket(KF)
-                    OBraketa.set_xcen(x_coordinate)
-                    OBraketa.set_ycen(y_coordinate)
+                    name = 'raketa_nr_{}'.format("1")
+                    print(f" name  {name}")
+                    name = rocket(KF)
+                    name.set_xcen(x_coordinate)
+                    name.set_ycen(y_coordinate)
+                    name.set_xe(x_coordinate)
+                    name.set_ye(y_coordinate)
+                    name.rocket_predict()
+                    rocket_list.append(name)
 
-                    rocket_list.append(OBraketa)
 
 
 
-                # object name generation
-                # name = 'raketa_nr_{}'.format(i)
-                # print (" name   ", name )
-            if len(rocket_list) > 0 and len(rocket_list) < 10:
+            if len(rocket_list) > 0 and len(rocket_list) < 20:
                 for RAKETA in rocket_list:
                     (x_predicted, y_predicted) = RAKETA.rocket_predict()
                     x_center = RAKETA.get_xcen()
@@ -158,22 +182,37 @@ def main():
                     cv2.putText(frame,f"  Measured Position  ", (int (x_center), int (y_center)), 0, 0.5, (0, 191, 255), 2)
                     RAKETA.getparam()
 
+
         else:
             if len(rocket_list) > 0:
                 for Eraketa in rocket_list:
                     (x_predicted, y_predicted) = Eraketa.rocket_predict()
+                    x_center = Eraketa.get_xcen()
+                    y_center = Eraketa.get_ycen()
+                    (x_estimated, y_estimated) = Eraketa.coords_update((x_center, y_center))
+
                     # KALMAN predict
                     # Draw a circle as the predicted object position
-
-                    cv2.circle(frame, (int(x_predicted), int(y_predicted)), 25, (255, 0, 0), 2)
+                    cv2.circle(frame, (int(x_center), int(y_center)), 15, (0, 191, 255), 2)
+                    cv2.circle(frame, (int(x_estimated), int(y_estimated)), 20, (0, 0, 255), 2)
+                    cv2.circle(frame, (int(x_predicted), int(y_predicted)), 40, (255, 0, 0), 2)
                     cv2.putText(frame, f"  Predicted Position ", (int(x_predicted + 15), int(y_predicted + 0)), 0, 0.5,
                                 (255, 0, 0), 2)
 
 
+        # sutrumpinam listó ilgi
+        rocket_list = rocket_list[:20]
+        while i <= 20:
+            for Object in rocket_list:
+                Object.timer()
+                if Object.rocket_timer > 100:
+                    del Object
+                else:
+                    pass
+                    #print(f"  Object timer:  {Object.rocket_timer}   ")
+            i+= 1
+        i = 0
 
-        if len(rocket_list) >10:
-            rocket_list=[]
-        print ( f" rocket_list \n \n  {rocket_list}  \n \n  *************************" )
 
         cv2.imshow('Rocket-Tracking', frame)
         if cv2.waitKey(2) & 0xFF == ord('q'):
