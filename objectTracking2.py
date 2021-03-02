@@ -117,6 +117,7 @@ def main():
 
                         r_c_x = raketa.get_xcen()
                         r_c_y = raketa.get_ycen()
+                        print ( f"  rcx  {r_c_x} rcy  {r_c_y} ")
 
 
 
