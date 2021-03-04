@@ -9,7 +9,6 @@ class rocket:
 
 
     x_set = False
-    updated= False
     def __init__(self, KF):
         self.KF = KF
         self.rocket_timer = 0
@@ -19,6 +18,8 @@ class rocket:
         self.y_p = [0]
         self.xcen = 0
         self.ycen = 0
+        self.updated = False
+
     def set_xcen(self,xcen):
         self.xcen = xcen
     def set_ycen(self,ycen):
@@ -33,23 +34,25 @@ class rocket:
         return self.x_p, self.y_p
     def coords_update(self,xye):
         self.xe,self.ye = self.KF.update(xye)
-        self.rocket_timer = 0
 
         return self.xe,self.ye
     def set_xe(self,xe):
+        print ( f" XE SET XE  {xe} ")
+
         self.xe = xe
+        print ( f" self.xe {self.xe} ")
     def set_ye(self,ye):
-        self.ye = ye
+        self.ye = [ye]
     def get_xp(self):
         return self.x_p
     def get_yp(self):
         return self.y_p
 
     def set_xp(self, x_p):
-        self.x_p = x_p
+        self.x_p = [x_p]
 
     def set_yp(self,y_p):
-        self.y_p = y_p
+        self.y_p = [y_p]
 
     def getparam(self):
         return print(f"\n"
@@ -64,6 +67,18 @@ class rocket:
                      f"\n")
     def timer(self):
         self.rocket_timer+=1
+
+    def get_time(self):
+        return self.rocket_timer
+
+    def set_time(self):
+        self.rocket_timer = 0
+
+    def set_updated(self):
+        self.updated = True
+        self.rocket_timer = 0
+    def reset_updated(self):
+        self.updated = False
 
 
 #@jit(target = "cuda")
@@ -87,6 +102,7 @@ def main():
     rocket_list = []
     VideoCap = cv2.VideoCapture('video3_cut.mp4')
     zone = 80
+
     for i in range(10):
         KF = KalmanFilter(0.05, 4, 4, 4, 4, 4)
         rocket_list.append(rocket(KF))
@@ -123,9 +139,6 @@ def main():
 
                 print ( f" rocket_list \n \n  {rocket_list}  \n \n  *************************" )
 
-                #jeigu egzistuoja raketos liste objektai:
-
-
                     # perrenkam kiekviena objekta
                 for raketa in rocket_list:
 
@@ -144,8 +157,7 @@ def main():
                         raketa.rocket_predict()
                         raketa.coords_update((x_coordinate, y_coordinate))
 
-                        raketa.updated = True
-
+                        raketa.set_updated()
                         print ( " \n  break \n ")
 
                         break
@@ -156,10 +168,16 @@ def main():
                         if (r_c_x == 0 and r_c_y == 0):
                             raketa.set_xcen(x_coordinate)
                             raketa.set_ycen(y_coordinate)
-                            raketa.coords_update((x_coordinate,y_coordinate))
-                            raketa.set_xp(x_coordinate)
-                            raketa.set_yp(y_coordinate)
 
+                            # ciklas kad praleisti taikinio judejima is 0, 0 i x_cord & y_cord
+                            while i < 140:
+                                (nothing_x,nothing_y) = raketa.coords_update((x_coordinate,y_coordinate))
+                                (nothing_x_p, nothing_y_p) = raketa.rocket_predict()
+                                i+=1
+                            i = 0
+                            #raketa.coords_update((x_coordinate,y_coordinate))
+                            print ( " raketa prisikiriama naujam objektui ")
+                            raketa.getparam()
                             break
 
                         else:
@@ -178,12 +196,12 @@ def main():
             for Eraketa in rocket_list:
                 r_c_x = Eraketa.get_xcen()
                 r_c_y = Eraketa.get_ycen()
-
                 print(f" ELSE  rcx  {r_c_x} rcy  {r_c_y} ")
                 if (r_c_x != 0 and r_c_y != 0):
-                    (x_predicted, y_predicted) = Eraketa.rocket_predict()
+
                     x_center = Eraketa.get_xcen()
                     y_center = Eraketa.get_ycen()
+                    (x_predicted, y_predicted) = Eraketa.rocket_predict()
                     (x_estimated, y_estimated) = Eraketa.coords_update((x_center, y_center))
 
                     print ( f" x_estimated  {x_estimated} y_estimated {y_estimated}  ")
@@ -192,7 +210,6 @@ def main():
                     # KALMAN predict
                     # Draw a circle as the predicted object position
                     cv2.circle(frame, (int(x_center), int(y_center)), 15, (0, 191, 255), 2)
-                    cv2.circle(frame, (0,0), 50 , (0,255,0), 2)
                     cv2.circle(frame, (int(x_estimated), int(y_estimated)), 20, (0, 0, 255), 2)
                     cv2.circle(frame, (int(x_predicted), int(y_predicted)), zone, (255, 0, 0), 2)
                     cv2.putText(frame, f"  Predicted Position ", (int(x_predicted + 15), int(y_predicted + 0)), 0, 0.5,(255, 0, 0), 2)
@@ -232,17 +249,29 @@ def main():
 
                 print ( "  second continue  ")
                 continue
-        # sutrumpinam listó ilgi
-        # while i <= 20:
-        #     for Object in rocket_list:
-        #         Object.timer()
-        #         if Object.rocket_timer > 40:
-        #             del Object
-        #         else:
-        #             print( f' timer {Object.rocket_timer}')
-        #     i+= 1
-        # i = 0
-        #
+
+        #timer
+
+        for r_timer in rocket_list:
+            time = r_timer.get_time()
+            #rocket.timer + 1
+            r_timer.timer()
+            r_timer.getparam()
+            print ( f'  rocket time  {time}')
+            if time > 50:
+
+                print (f" time more than 50  ")
+
+                r_timer.set_xcen(0)
+                r_timer.set_ycen(0)
+                r_timer.reset_updated()
+                r_timer.getparam()
+                r_timer.set_time()
+            else:
+                continue
+
+
+
 
         cv2.imshow('Rocket-Tracking', frame)
         if cv2.waitKey(2) & 0xFF == ord('q'):
